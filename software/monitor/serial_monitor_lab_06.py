@@ -4,6 +4,7 @@ import click
 import cv2 as cv
 import numpy as np
 from serial import Serial
+import random 
 
 PORT = "COM5"
 BAUDRATE = 115200
@@ -128,6 +129,7 @@ def monitor(
 
             try:
                 new_frame = load_raw_frame(raw_data, rows, cols)
+
             except ValueError as e:
                 click.echo(f"Malformed frame. {e}")
                 continue
@@ -225,8 +227,32 @@ def decode_rle(raw_data: bytes) -> bytes:
 
 
 def load_raw_frame(raw_data: bytes, rows: int, cols: int) -> np.array:
-    return np.frombuffer(raw_data, dtype=np.uint8).reshape((rows, cols, 1))
+
+    data = np.frombuffer(raw_data, dtype=np.uint16).reshape((int(rows/2), cols, 1))
+    rgb_frame = np.zeros((int(rows/2), cols, 3), np.uint8)
+    for i in range(int(rows/2)):
+        for j in range(cols):
+            rgb_frame[i][j][2] = (data[i][j] & 0b1111100000000000) >> 8
+            rgb_frame[i][j][1] = (data[i][j] & 0b0000011111100000) >> 3
+            rgb_frame[i][j][0] = (data[i][j] & 0b0000000000011111) << 3
+            print(data[i][j], rgb_frame[i][j])
+            
+    return rgb_frame
 
 
 if __name__ == "__main__":
     monitor()
+    """
+    rows = 400
+    cols = 400
+    sum = np.zeros((rows,cols,3), np.uint8) 
+
+    while(1):
+        
+        for i in range(rows):
+            for j in range(cols):
+                sum[i][j] = [random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)]
+        cv.imshow("Video Stream", sum)
+        if cv.waitKey(1) == ord("q"):
+                break
+    """

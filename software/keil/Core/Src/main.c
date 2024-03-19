@@ -47,7 +47,7 @@ void reset_buffer(int len);
 
 void print_buf_delta(void);
 void print_buf_RLE(void);
-
+void print_buf_RGB(void);
 
 int main(void)
 {
@@ -73,22 +73,23 @@ int main(void)
   ov7670_init();
   HAL_Delay(100);
 	uint8_t count = 0;
-	
+	/*
 	while(1) {
 		ov7670_capture(snapshot_buff);
 		//print_buf_RLE(); // Section 6.3
 		//print_buf(); // Section 4 or 6.2
 		// Section 7
-		
 		if(count % 5 == 0) {
 			print_buf_RLE();
 		} else {
 			print_buf_delta();
 		}
 		count++;
+
 		
+		print_buf_RGB();
 	}
-	
+	*/
   // Your startup code here
 	// 2.1 Test
 	/*memcpy(tx_buff, PREAMBLE, sizeof(PREAMBLE));
@@ -104,9 +105,10 @@ int main(void)
     // Your code here
     if (HAL_GPIO_ReadPin(USER_Btn_GPIO_Port, USER_Btn_Pin)) {
       HAL_Delay(100);  // debounce
-			ov7670_snapshot(snapshot_buff);
+			ov7670_capture(snapshot_buff);
 			HAL_Delay(0);
-			print_buf();
+			
+			print_buf_RGB();
     }
   }
 }
@@ -247,4 +249,25 @@ void print_buf_RLE() {
 	uart_send_bin(tx_buff, tx_buff_len);
 	HAL_DCMI_Resume(&hdcmi);
 	
+}
+
+
+void print_buf_RGB() {
+  // Send image data through serial port.
+  // Your code here
+	while(HAL_UART_GetState(&huart3) != HAL_UART_STATE_READY){
+		HAL_Delay(0);
+	}
+	// Part 4
+	
+	memcpy(tx_buff, PREAMBLE, sizeof(PREAMBLE));
+	for(int i = 0; i < (IMG_COLS*IMG_ROWS)/2; i++){
+		*(tx_buff+sizeof(PREAMBLE)+2*i) = (uint8_t)((*(snapshot_buff+i) & 0xFF00) >> 8);
+		*(tx_buff+sizeof(PREAMBLE)+2*i+1) = (uint8_t)(*(snapshot_buff+i) & 0xFF);
+	}
+	memcpy(tx_buff + sizeof(PREAMBLE) + 2*(IMG_ROWS * IMG_COLS), SUFFIX, sizeof(SUFFIX));
+	tx_buff_len = sizeof(PREAMBLE) + 2*(IMG_ROWS * IMG_COLS) + sizeof(SUFFIX);
+	
+	uart_send_bin(tx_buff, tx_buff_len);
+	HAL_DCMI_Resume(&hdcmi);
 }

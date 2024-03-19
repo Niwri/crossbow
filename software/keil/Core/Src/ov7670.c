@@ -10,15 +10,16 @@ extern DCMI_HandleTypeDef hdcmi;
 extern DMA_HandleTypeDef hdma_dcmi;
 extern uint8_t dma_flag;
 
-const uint8_t OV7670_reg[OV7670_REG_NUM][2] = {
+const uint8_t OV7670_reg[OV7670_REG_NUM+2][2] = {
   // Array format: {<reg address>, <reg_value> }
   { 0x12, 0x80 },
   // Image format
-  { 0x12, 0x8 },  // 0x14 = QVGA size, RGB mode; 0x8 = QCIF, YUV, 0xc = QCIF (RGB)
+  { 0x12, 0xc },  // 0x14 = QVGA size, RGB mode; 0x8 = QCIF, YUV, 0xc = QCIF (RGB)
   { 0xc, 0x8 }, //
   { 0x11, 0b1000000 }, //
+	{ 0x40, 0xd0 },
 
-  // { 0xb0, 0x84 }, //Color mode (Not documented??)
+  { 0xb0, 0x84 }, //Color mode (Not documented??)
 
   // Hardware window
   { 0x11, 0x01 }, //PCLK settings, 15fps
@@ -177,7 +178,7 @@ uint8_t ov7670_init(void){
 	}*/
 
   // Your code here
-	for(int i = 0; i < OV7670_REG_NUM; i++){
+	for(int i = 0; i < OV7670_REG_NUM+2; i++){
 		// delay between writes
 		HAL_Delay(10);
 		// write the right register value into right location
@@ -231,6 +232,7 @@ void ov7670_snapshot(uint16_t *buff){
 	}
 	HAL_DCMI_Stop(&hdcmi);
 	dma_flag = 0;
+	HAL_DCMI_Suspend(&hdcmi);
   //
 }
 

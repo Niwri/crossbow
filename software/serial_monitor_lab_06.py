@@ -228,14 +228,36 @@ def decode_rle(raw_data: bytes) -> bytes:
 
 def load_raw_frame(raw_data: bytes, rows: int, cols: int) -> np.array:
 
-    data = np.frombuffer(raw_data, dtype=np.uint16).reshape((int(rows/2), cols, 1))
-    rgb_frame = np.zeros((int(rows/2), cols, 3), np.uint8)
-    for i in range(int(rows/2)):
-        for j in range(cols):
-            rgb_frame[i][j][2] = (data[i][j] & 0b1111100000000000) >> 8
-            rgb_frame[i][j][1] = (data[i][j] & 0b0000011111100000) >> 3
-            rgb_frame[i][j][0] = (data[i][j] & 0b0000000000011111) << 3
-            print(data[i][j], rgb_frame[i][j])
+    print("Raw Data in Binary:")
+    count = 0
+    for byte in raw_data:
+        print(bin(byte)[2:].zfill(8), end=' ')  # Print binary representation of each byte
+        count = count + 1
+        if count > 100:
+            break
+    print()  # Add a newline after printing all bytes
+
+    data = np.frombuffer((raw_data), dtype=np.uint16)
+    count = 0
+    for i in data:
+        print(i)
+        count = count + 1
+        if count > 100:
+            break
+
+    data = np.frombuffer(raw_data, dtype=np.uint16).reshape((int(cols/2), int(rows), 1))
+    rgb_frame = np.zeros((int(cols/2), int(rows), 3), np.uint8)
+    count = 0
+    for i in range(int(cols/2)):
+        for j in range(int(rows)):
+            
+            rgb_frame[i][j][2] = (data[i][j][0] & 0b1111100000000000) >> 8
+            rgb_frame[i][j][1] = (data[i][j][0] & 0b0000011111100000) >> 3
+            rgb_frame[i][j][0] = (data[i][j][0] & 0b0000000000011111) << 3
+            if count <= 100:
+                count = count + 1
+                print(bin(data[i][j][0])[2:].zfill(16), end=' ')
+                print(data[i][j], rgb_frame[i][j])
             
     return rgb_frame
 

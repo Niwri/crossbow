@@ -259,11 +259,18 @@ void print_buf_RGB() {
 		HAL_Delay(0);
 	}
 	// Part 4
-	
+	reset_buffer(tx_buff_len);
 	memcpy(tx_buff, PREAMBLE, sizeof(PREAMBLE));
 	for(int i = 0; i < (IMG_COLS*IMG_ROWS)/2; i++){
-		*(tx_buff+sizeof(PREAMBLE)+2*i) = (uint8_t)((*(snapshot_buff+i) & 0xFF00) >> 8);
-		*(tx_buff+sizeof(PREAMBLE)+2*i+1) = (uint8_t)(*(snapshot_buff+i) & 0xFF);
+		//*(tx_buff+sizeof(PREAMBLE)+2*i) = (uint8_t)((*(snapshot_buff+i) & 0xFF00) >> 8);
+		//*(tx_buff+sizeof(PREAMBLE)+2*i+1) = (uint8_t)(*(snapshot_buff+i) & 0xFF);
+		if( (i) % 2 == 0) {
+			*(tx_buff+sizeof(PREAMBLE)+2*i) = (uint8_t)(0b11111000);
+			*(tx_buff+sizeof(PREAMBLE)+2*i+1) = (uint8_t)(0b000);
+		} else {
+			*(tx_buff+sizeof(PREAMBLE)+2*i) = (uint8_t)(0b00000000);
+		  *(tx_buff+sizeof(PREAMBLE)+2*i+1) = (uint8_t)(0b00011111);
+		}
 	}
 	memcpy(tx_buff + sizeof(PREAMBLE) + 2*(IMG_ROWS * IMG_COLS), SUFFIX, sizeof(SUFFIX));
 	tx_buff_len = sizeof(PREAMBLE) + 2*(IMG_ROWS * IMG_COLS) + sizeof(SUFFIX);

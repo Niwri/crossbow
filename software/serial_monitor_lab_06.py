@@ -230,35 +230,57 @@ def load_raw_frame(raw_data: bytes, rows: int, cols: int) -> np.array:
 
     print("Raw Data in Binary:")
     count = 0
-    for byte in raw_data:
-        print(bin(byte)[2:].zfill(8), end=' ')  # Print binary representation of each byte
-        count = count + 1
-        if count > 100:
-            break
+    data = np.zeros((int(rows/2), int(cols), 1), np.uint16)
+
+    for i in range(int(rows/2)):
+        for j in range(int(cols)):
+            index = int((i * cols + j) * 2)
+            byte1 = raw_data[index+1]
+            if index+2 == rows*cols:
+                byte2 = 0x0
+            else:
+                byte2 = raw_data[index+2]
+            data[i][j] = byte1 << 8 | byte2
+           
+            if count < 100:
+                count = count + 1
+                print(bin(byte1 << 8 | byte2)[2:].zfill(16), end=' ')
     print()  # Add a newline after printing all bytes
 
-    data = np.frombuffer((raw_data), dtype=np.uint16)
-    count = 0
-    for i in data:
-        print(i)
-        count = count + 1
-        if count > 100:
-            break
+   
 
-    data = np.frombuffer(raw_data, dtype=np.uint16).reshape((int(cols/2), int(rows), 1))
-    rgb_frame = np.zeros((int(cols/2), int(rows), 3), np.uint8)
+    #data = np.frombuffer(raw_data, dtype=np.uint16).reshape((int(rows), int(cols/2), 1))
+    ycrcb_frame = np.zeros((int(rows/2), int(cols), 3), np.uint8)
     count = 0
-    for i in range(int(cols/2)):
-        for j in range(int(rows)):
-            
+    y_0 = 0
+    y_1 = 0
+    cb = 0
+    cr = 0
+    for i in range(int(rows/2)):
+        for j in range(int(cols)):
+            """
             rgb_frame[i][j][2] = (data[i][j][0] & 0b1111100000000000) >> 8
             rgb_frame[i][j][1] = (data[i][j][0] & 0b0000011111100000) >> 3
             rgb_frame[i][j][0] = (data[i][j][0] & 0b0000000000011111) << 3
             if count <= 100:
                 count = count + 1
                 print(bin(data[i][j][0])[2:].zfill(16), end=' ')
-                print(data[i][j], rgb_frame[i][j])
-            
+                print(data[i][j], ycrcb_frame[i][j])
+    
+            """
+            if j % 2 == 0:
+                y_0 = (data[i][j][0] & 0xFF00) >> 8
+                cb = (data[i][j][0] & 0xFF)
+            else:
+                y_1 = (data[i][j][0] & 0xFF00) >> 8 
+                cr = (data[i][j][0] & 0xFF)
+                ycrcb_frame[i][j-1][0] = y_0
+                ycrcb_frame[i][j-1][1] = cr
+                ycrcb_frame[i][j-1][2] = cb
+                ycrcb_frame[i][j][0] = y_1
+                ycrcb_frame[i][j][1] = cr
+                ycrcb_frame[i][j][2] = cb
+    rgb_frame = cv.cvtColor(ycrcb_frame, cv.COLOR_YCR_CB2BGR)
     return rgb_frame
 
 

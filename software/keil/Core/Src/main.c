@@ -163,6 +163,7 @@ int main(void)
 		HAL_Delay(0);
 			
 		print_buf_RGB();
+		HAL_Delay(100);
 	}
 }
 

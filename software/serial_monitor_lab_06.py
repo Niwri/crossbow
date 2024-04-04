@@ -295,7 +295,8 @@ def main(port1: str, port2: str,
         rgb_arr2 = []
         input("Click a button to capture Image One")
         with Serial(port1, BAUDRATE, timeout=1) as ser:
-            ser.write(b'\r\n!BEGIN!\r\n')
+            ser.write(b"\r\n!BEGIN!\r\n")
+            ser.write(b"\r\n!BEGIN!\r\n")
             rgb_arr1 = monitor(
                             port1,
                             baudrate,
@@ -318,7 +319,8 @@ def main(port1: str, port2: str,
 
         input("Click a button to capture Image Two")
         with Serial(port2, BAUDRATE, timeout=1) as ser:
-            ser.write(b'\r\n!BEGIN!\r\n')
+            ser.write(b"\r\n!BEGIN!\r\n")
+            ser.write(b"\r\n!BEGIN!\r\n")
             rgb_arr2 = monitor(
                         port2,
                         baudrate,

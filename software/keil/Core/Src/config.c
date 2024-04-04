@@ -26,6 +26,12 @@ HAL_StatusTypeDef uart_send_bin(uint8_t * buff, unsigned int len) {
   return HAL_UART_Transmit_DMA(&huart3, (uint8_t *)buff, len);
 }
 
+HAL_StatusTypeDef uart_receive_bin(uint8_t * buff, unsigned int len) {
+  // Your code here
+  return HAL_UART_Receive(&huart3, (uint8_t *)buff, len, HAL_MAX_DELAY);
+}
+
+
 /**
   * @brief System Clock Configuration
   * @retval None

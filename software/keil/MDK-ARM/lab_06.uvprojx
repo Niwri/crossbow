@@ -425,6 +425,11 @@
               <FileType>1</FileType>
               <FilePath>.\motor.c</FilePath>
             </File>
+            <File>
+              <FileName>stepper_motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\stepper_motor.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

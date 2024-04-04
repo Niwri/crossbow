@@ -19,6 +19,7 @@ extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
 HAL_StatusTypeDef print_msg(char * msg);
 
 HAL_StatusTypeDef uart_send_bin(uint8_t * buff, unsigned int len);
+HAL_StatusTypeDef uart_receive_bin(uint8_t * buff, unsigned int len);
 
 void SystemClock_Config(void);
 void MX_GPIO_Init(void);

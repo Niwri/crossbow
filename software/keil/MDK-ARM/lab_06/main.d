@@ -40,4 +40,6 @@ lab_06/main.o: ..\Core\Src\main.c ..\Core\Inc\main.h \
   ..\Drivers\STM32F4xx_HAL_Driver\Inc\stm32f4xx_hal_pcd_ex.h \
   C:\Keil_v5\ARM\ARMCLANG\include\string.h \
   C:\Keil_v5\ARM\ARMCLANG\include\stdio.h ..\Core\Inc\config.h \
-  ..\Core\Inc\ov7670.h C:\Keil_v5\ARM\ARMCLANG\include\stdlib.h
+  ..\Core\Inc\ov7670.h C:\Keil_v5\ARM\ARMCLANG\include\stdlib.h \
+  ..\Core\Inc\stepper_motor.h C:\Keil_v5\ARM\ARMCLANG\include\inttypes.h \
+  ..\Core\Inc\motor.h

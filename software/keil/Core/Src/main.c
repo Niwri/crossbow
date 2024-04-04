@@ -26,20 +26,27 @@
 #include "config.h"
 #include "ov7670.h"
 #include "stdlib.h"
+#include "stepper_motor.h"
 
 /* USER CODE BEGIN PV */
 #define PREAMBLE "\r\n!START!\r\n"
 #define DELTA_PREAMBLE "\r\n!DELTA!\r\n"
 #define SUFFIX "!END!\r\n"
+#define BEGIN "\r\n!BEGIN!\r\n"
 
 uint16_t snapshot_buff[IMG_ROWS * IMG_COLS];
 //uint8_t old_snapshot_buff[IMG_ROWS * IMG_COLS];
 
+uint8_t rx_buff[100];
 uint8_t tx_buff[sizeof(PREAMBLE) + 2 * IMG_ROWS * IMG_COLS + sizeof(SUFFIX)];
 uint8_t previous_buff[IMG_ROWS*IMG_COLS];
 size_t tx_buff_len = 0;
 
 uint8_t dma_flag = 0, dma2_flag = 0;
+
+uint16_t _freq;
+struct StepperMotor steppers[2];
+uint8_t i2c_addr = 0x40;
 
 // Your function definitions here
 void print_buf(void);
@@ -66,7 +73,7 @@ int main(void)
   MX_I2C2_Init();
   MX_TIM1_Init();
   MX_TIM6_Init();
-
+	
   char msg[100];
 
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
@@ -100,6 +107,7 @@ int main(void)
 	tx_buff_len = sizeof(PREAMBLE) + 2 * IMG_ROWS * IMG_COLS + sizeof(SUFFIX);
 	uart_send_bin(tx_buff, tx_buff_len); */
 	
+	/*
   while (1)
   {
     // Your code here
@@ -111,6 +119,51 @@ int main(void)
 			print_buf_RGB();
     }
   }
+	*/
+	/*
+	sprintf(msg, "Start\n");
+	print_msg(msg);
+	reset_motor();
+	sprintf(msg, "Reseted\n");
+	print_msg(msg);
+	begin(1600);
+	sprintf(msg, "One\n");
+	print_msg(msg);
+	setStepper(200, 1);
+	setSpeed(10, 1);
+
+	while(1) {
+		sprintf(msg, "Single coil steps\n");
+		print_msg(msg);
+		step(100, FORWARD, SINGLE, 1);
+		step(100, BACKWARD, SINGLE, 1);
+				
+		sprintf(msg, "Double coil steps\n");
+		print_msg(msg);
+		step(100, FORWARD, DOUBLE, 1);
+		step(100, BACKWARD, DOUBLE, 1);
+
+		sprintf(msg, "Interleave coil steps\n");
+		print_msg(msg);
+		step(100, FORWARD, INTERLEAVE, 1);
+		step(100, BACKWARD, INTERLEAVE, 1);
+
+		sprintf(msg, "Microstep steps\n");
+		print_msg(msg);
+		step(50, FORWARD, MICROSTEP, 1);
+		step(50, BACKWARD, MICROSTEP, 1);
+	}
+	*/
+	while(1) {
+		while(uart_receive_bin(rx_buff, sizeof(BEGIN)) != HAL_OK) {
+			HAL_Delay(0); 
+		}
+		HAL_Delay(100);
+		ov7670_capture(snapshot_buff);
+		HAL_Delay(0);
+			
+		print_buf_RGB();
+	}
 }
 
 

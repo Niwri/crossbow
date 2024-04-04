@@ -6,6 +6,7 @@
 "lab_06\stm32f4xx_it.o"
 "lab_06\stm32f4xx_hal_msp.o"
 "lab_06\motor.o"
+"lab_06\stepper_motor.o"
 "lab_06\stm32f4xx_hal_dcmi.o"
 "lab_06\stm32f4xx_hal_dcmi_ex.o"
 "lab_06\stm32f4xx_hal_rcc.o"

@@ -16,6 +16,9 @@ SUFFIX = "!END!\r\n"
 ROWS = 144
 COLS = 174
 
+global frame1
+global frame2
+
 
 @click.command()
 @click.option(
@@ -140,13 +143,13 @@ def monitor(
             if prev_frame_ts is not None:
                 try:
                     fps = 1 / (now - prev_frame_ts)
-                    click.echo(f"Frames per second: {fps:.2f}")
+                    click.echo(f"Frames cper second: {fps:.2f}")
                 except ZeroDivisionError:
                     click.echo("FPS too fast to measure")
             prev_frame_ts = now
 
-            cv.namedWindow("Video Stream", cv.WINDOW_KEEPRATIO)
-            cv.imshow("Video Stream", frame)
+            cv.namedWindow("Video", cv.WINDOW_KEEPRATIO)
+            cv.imshow("Video", frame)
 
             # Wait for 'q' to stop the program
             if cv.waitKey(1) == ord("q"):
@@ -281,6 +284,10 @@ def load_raw_frame(raw_data: bytes, rows: int, cols: int) -> np.array:
                 ycrcb_frame[i][j][1] = cr
                 ycrcb_frame[i][j][2] = cb
     rgb_frame = cv.cvtColor(ycrcb_frame, cv.COLOR_YCR_CB2BGR)
+    
+    # How to set a global variable equivalent to the rgbframe (actually BGR)
+    #global frame1[rows][cols][3] = rgb_frame
+    
     return rgb_frame
 
 

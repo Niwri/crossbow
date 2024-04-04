@@ -17,6 +17,10 @@ SUFFIX = "!END!\r\n"
 ROWS = 144
 COLS = 174
 
+global frame1
+frame1 = np.zeros((ROWS, COLS, 3))
+global frame2
+
 def monitor(
     port: str,
     baudrate: int,
@@ -239,6 +243,10 @@ def load_raw_frame(raw_data: bytes, rows: int, cols: int) -> np.array:
                 ycrcb_frame[i][j][1] = cr
                 ycrcb_frame[i][j][2] = cb
     rgb_frame = cv.cvtColor(ycrcb_frame, cv.COLOR_YCR_CB2BGR)
+    
+    # How to set a global variable equivalent to the rgbframe (actually BGR)
+    frame1 = rgb_frame
+    
     return rgb_frame
 
 

@@ -58,6 +58,8 @@ def calculate_depth(frame1, frame2):
                 indexcount += 1
                 indexArray[indexcount] = (i,j)
 
+    # link to library
+    # https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html
     # if we want to compare and check linearity or smth    
     prev_inertia = ((ROWS/2)^2 + (COLS/2)^2)
 
@@ -106,10 +108,10 @@ def calculate_depth(frame1, frame2):
         # top left
         if pointy1 < (BOX_SIZE/2):
             # from 0 to end of row
-            for i in range(COLS - pointx1 - (BOX_SIZE/2)):
+            for i in range(pointx1, COLS - pointx1 - (BOX_SIZE/2)):
                 # window of comparison
                 cur_comparison = 0
-                for j in range(pointx1 + (BOX_SIZE/2)):
+                for j in range(i - pointx1, i + (BOX_SIZE/2)):
                     for k in range(pointy1 + (BOX_SIZE/2)):
                         frame1count += minArray[j][k]
                         frame2count += minArray2[j + i][k + i]
@@ -120,10 +122,10 @@ def calculate_depth(frame1, frame2):
                     pointx2 = j + pointx1 + i
         # bottom left
         elif pointy1 > (ROWS - (BOX_SIZE/2)):
-            for i in range(COLS - pointx1 - (BOX_SIZE/2)):
+            for i in range(pointx1, COLS - pointx1 - (BOX_SIZE/2)):
                 cur_comparison = 0
-                for j in range(pointx1 + (BOX_SIZE/2)):
-                    for k in range(pointy1 - (BOX_SIZE/2), ROWS - (BOX_SIZE/2)):
+                for j in range(i - pointx1, i + (BOX_SIZE/2)):
+                    for k in range(pointy1 - (BOX_SIZE/2), ROWS - pointy1):
                         frame1count += minArray[j][k]
                         frame2count += minArray2[j + i][k + i]
                         cur_comparison += (frame1count - frame2count)^2
@@ -132,9 +134,9 @@ def calculate_depth(frame1, frame2):
                     pointx2 = j + pointx1 + i
         # middle left
         else:
-            for i in range(COLS - pointx1 - (BOX_SIZE/2)):
+            for i in range(pointx1, COLS - pointx1 - (BOX_SIZE/2)):
                 cur_comparison = 0
-                for j in range(pointx1 + (BOX_SIZE/2)):
+                for j in range(i - pointx1, i + (BOX_SIZE/2)):
                     for k in range(pointy1 - (BOX_SIZE/2), pointy1 + (BOX_SIZE/2)):
                         frame1count += minArray[j][k]
                         frame2count += minArray2[j + i][k + i]
@@ -146,9 +148,9 @@ def calculate_depth(frame1, frame2):
     elif pointx1 > (COLS - (BOX_SIZE/2)):
         # top right
         if pointy1 < (BOX_SIZE/2):
-            for i in range(COLS - (BOX_SIZE/2)):
+            for i in range((BOX_SIZE/2), COLS - pointx1):
                 cur_comparison = 0
-                for j in range(COLS - pointx1 - (BOX_SIZE/2)):
+                for j in range(i - (BOX_SIZE/2), i + (COLS - pointx1)):
                     for k in range(pointy1 + (BOX_SIZE/2)):
                         frame1count += minArray[j][k]
                         frame2count += minArray2[j + i][k + i]
@@ -158,10 +160,10 @@ def calculate_depth(frame1, frame2):
                     pointx2 = j + pointx1 + i
         # bottom right
         elif pointy1 > (ROWS - (BOX_SIZE/2)):
-            for i in range(COLS - (BOX_SIZE/2)):
+            for i in range((BOX_SIZE/2), COLS - pointx1):
                 cur_comparison = 0
-                for j in range(pointx1 + (BOX_SIZE/2)):
-                    for k in range(pointy1 - (BOX_SIZE/2), ROWS - (BOX_SIZE/2)):
+                for j in range(i - (BOX_SIZE/2), i + (COLS - pointx1)):
+                    for k in range(pointy1 - (BOX_SIZE/2), ROWS - pointy1):
                         frame1count += minArray[j][k]
                         frame2count += minArray2[j + i][k + i]
                         cur_comparison += (frame1count - frame2count)^2
@@ -170,9 +172,9 @@ def calculate_depth(frame1, frame2):
                     pointx2 = j + pointx1 + i
         # middle right
         else:
-            for i in range(COLS - (BOX_SIZE/2)):
+            for i in range((BOX_SIZE/2), COLS - pointx1):
                 cur_comparison = 0
-                for j in range(pointx1 + (BOX_SIZE/2)):
+                for j in range(i - (BOX_SIZE/2), i + (COLS - pointx1)):
                     for k in range(pointy1 - (BOX_SIZE/2), pointy1 + (BOX_SIZE/2)):
                         frame1count += minArray[j][k]
                         frame2count += minArray2[j + i][k + i]
@@ -180,7 +182,19 @@ def calculate_depth(frame1, frame2):
                 if cur_comparison < comparison:
                     comparison = cur_comparison
                     pointx2 = j + pointx1 + i
+    # no edge conditions
     else:   
+        for i in range((BOX_SIZE/2), COLS - (BOX_SIZE/2)):
+            cur_comparison = 0
+            for j in range(i - (BOX_SIZE/2), i + (BOX_SIZE/2)):
+                for k in range(pointy1 - (BOX_SIZE/2), pointy1 + (BOX_SIZE/2)):
+                    frame1count += minArray[j][k]
+                    frame2count += minArray2[j + i][k + i]
+                    cur_comparison += (frame1count - frame2count)^2
+            if cur_comparison < comparison:
+                comparison = cur_comparison
+                pointx2 = j + pointx1 + i
+    
     distance2 = pointx2
 
     # Calculate the disparity

@@ -28,25 +28,31 @@ THRESHOLD = 50
 # Code to find the point on both images
 # The target is the green LED; so checking for RGB value green 
 
-def calculate_depth(frame1):
+def calculate_depth(frame1, frame2):
     # Array to save index values
     indexArray = []
     indexcount = 0
-    # Array to hold colour values
+    # Arrays to hold colour values
     minArray = np.zeros((ROWS,COLS))
+    minArray2 = np.zeros((ROWS,COLS))
     # Get image data from image 1 --> given in BGR 565 format
     # Algorithm to find the center of green pixels
     for i in range(int(ROWS)):
         for j in range(int(COLS)):
             colour_count = 0
+            colour_count2 = 0
             # How much blue
             colour_count += (frame1[i][j][0] >> 3)
+            colour_count2 += (frame2[i][j][0] >> 3)
             # How much red
             colour_count += (frame1[i][j][2] >> 3)
+            colour_count2 += (frame2[i][j][2] >> 3)
             # How much green
             colour_count += abs((GREEN >> 5) - (frame1[i][j][1] >> 2))
+            colour_count2 += abs((GREEN >> 5) - (frame2[i][j][1] >> 2))
             # Create a 2D array representing image with min --> closest to colour green
             minArray[i][j] = colour_count
+            minArray2[i][j] = colour_count2
             # Compare with some threshold
             if colour_count <= THRESHOLD:
                 indexcount += 1
@@ -86,8 +92,95 @@ def calculate_depth(frame1):
     # Get image data from image 2
     # Algorithm to find the matching image - sum of squared differences
     # Compare with box of BOX_SIZE length and width and iterate (while keeping pixel index values) and choose minimum value
-    #pointx2 = 
-    #pointy2 = pointx2
+    # Y values should be the same for both images (parallel interface)
+    pointy2 = pointy1
+
+    frame1count = 0
+    frame2count = 0
+    #comparison = huge number
+
+    # NEED TO REDO below
+     
+    # left 
+    if pointx1 < (BOX_SIZE/2):
+        # top left
+        if pointy1 < (BOX_SIZE/2):
+            # from 0 to end of row
+            for i in range(COLS - pointx1 - (BOX_SIZE/2)):
+                # window of comparison
+                cur_comparison = 0
+                for j in range(pointx1 + (BOX_SIZE/2)):
+                    for k in range(pointy1 + (BOX_SIZE/2)):
+                        frame1count += minArray[j][k]
+                        frame2count += minArray2[j + i][k + i]
+                        # maybe use original frame BGR values for the differences
+                        cur_comparison += (frame1count - frame2count)^2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = j + pointx1 + i
+        # bottom left
+        elif pointy1 > (ROWS - (BOX_SIZE/2)):
+            for i in range(COLS - pointx1 - (BOX_SIZE/2)):
+                cur_comparison = 0
+                for j in range(pointx1 + (BOX_SIZE/2)):
+                    for k in range(pointy1 - (BOX_SIZE/2), ROWS - (BOX_SIZE/2)):
+                        frame1count += minArray[j][k]
+                        frame2count += minArray2[j + i][k + i]
+                        cur_comparison += (frame1count - frame2count)^2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = j + pointx1 + i
+        # middle left
+        else:
+            for i in range(COLS - pointx1 - (BOX_SIZE/2)):
+                cur_comparison = 0
+                for j in range(pointx1 + (BOX_SIZE/2)):
+                    for k in range(pointy1 - (BOX_SIZE/2), pointy1 + (BOX_SIZE/2)):
+                        frame1count += minArray[j][k]
+                        frame2count += minArray2[j + i][k + i]
+                        cur_comparison += (frame1count - frame2count)^2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = j + pointx1 + i
+    # right
+    elif pointx1 > (COLS - (BOX_SIZE/2)):
+        # top right
+        if pointy1 < (BOX_SIZE/2):
+            for i in range(COLS - (BOX_SIZE/2)):
+                cur_comparison = 0
+                for j in range(COLS - pointx1 - (BOX_SIZE/2)):
+                    for k in range(pointy1 + (BOX_SIZE/2)):
+                        frame1count += minArray[j][k]
+                        frame2count += minArray2[j + i][k + i]
+                        cur_comparison += (frame1count - frame2count)^2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = j + pointx1 + i
+        # bottom right
+        elif pointy1 > (ROWS - (BOX_SIZE/2)):
+            for i in range(COLS - (BOX_SIZE/2)):
+                cur_comparison = 0
+                for j in range(pointx1 + (BOX_SIZE/2)):
+                    for k in range(pointy1 - (BOX_SIZE/2), ROWS - (BOX_SIZE/2)):
+                        frame1count += minArray[j][k]
+                        frame2count += minArray2[j + i][k + i]
+                        cur_comparison += (frame1count - frame2count)^2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = j + pointx1 + i
+        # middle right
+        else:
+            for i in range(COLS - (BOX_SIZE/2)):
+                cur_comparison = 0
+                for j in range(pointx1 + (BOX_SIZE/2)):
+                    for k in range(pointy1 - (BOX_SIZE/2), pointy1 + (BOX_SIZE/2)):
+                        frame1count += minArray[j][k]
+                        frame2count += minArray2[j + i][k + i]
+                        cur_comparison += (frame1count - frame2count)^2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = j + pointx1 + i
+    else:   
     distance2 = pointx2
 
     # Calculate the disparity

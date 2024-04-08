@@ -492,6 +492,17 @@ def main(port1: str, port2: str, port3: str,
         quiet: bool,
     ):
     
+    ser3 = Serial(port3, BAUDRATE, timeout=1)
+    while True:
+        input("Click a button to rotate Left")
+        motor.rotateLeft(ser3, -180)
+        input("Click a button to rotate Left")
+        motor.rotateLeft(ser3, 180)
+        input("Click a button to rotate up")
+        motor.rotateUp(ser3, -360)
+        input("Click a button to rotate up")
+        motor.rotateUp(ser3, 360)
+    """
     rgb_arr1 = []
     rgb_arr2 = []
     input("Click a button to capture Image One")
@@ -542,6 +553,7 @@ def main(port1: str, port2: str, port3: str,
     cv.waitKey(1)
 
     calculate_depth(rgb_arr1, rgb_arr2)
+    """
 
 if __name__ == "__main__":
     main()

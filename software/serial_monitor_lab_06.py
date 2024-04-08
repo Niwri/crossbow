@@ -6,16 +6,17 @@ import numpy as np
 from serial import Serial
 import random 
 import math
+import motor
 from sklearn.cluster import KMeans
 
 # RGB Green (LED) - edit after finding LED green value
 GREEN = 0b0000011111100000
 # everything in meters
 # focal length = 6mm
-FOCAL_LENGTH = 6 * (10^-3)
+FOCAL_LENGTH = 6 * (10**(-3))
 
 # pixel length, pixel width = 3.6um
-PIXEL_LENGTH = 3.6 * 10^(-6)
+PIXEL_LENGTH = 3.6 * 10**(-6)
 
 # baseline distance between center of left and right cameras - dummy variable for now
 BASELINE_D = 5
@@ -28,6 +29,7 @@ THRESHOLD = 50
 
 PORT1 = "COM4"
 PORT2 = "COM5"
+PORT3 = "COM6"
 BAUDRATE = 115200
 
 PREAMBLE = "!START!\r\n"
@@ -453,6 +455,9 @@ def calculate_depth(frame1, frame2):
 @click.option(
     "-p2", "--port2", default=PORT2, help="Serial (COM) port of the target board"
 )
+@click.option(
+    "-p3", "--port3", default=PORT3, help="Serial (COM) port of the target board"
+)
 @click.option("-br", "--baudrate", default=BAUDRATE, help="Serial port baudrate")
 @click.option("--timeout", default=1, help="Serial port timeout")
 @click.option("--rows", default=ROWS, help="Number of rows in the image")
@@ -474,7 +479,7 @@ def calculate_depth(frame1, frame2):
 )
 @click.option("--rle", is_flag=True, default=False, help="Run-Length Encoding")
 @click.option("--quiet", is_flag=True, default=False, help="Print fewer messages")
-def main(port1: str, port2: str, 
+def main(port1: str, port2: str, port3: str,
         baudrate: int,
         timeout: int,
         rows: int,
@@ -486,39 +491,15 @@ def main(port1: str, port2: str,
         rle: bool,
         quiet: bool,
     ):
-    while True:
-        rgb_arr1 = []
-        rgb_arr2 = []
-        input("Click a button to capture Image One")
-        with Serial(port1, BAUDRATE, timeout=1) as ser:
-            ser.write(b"\r\n!BEGIN!\r\n")
-            ser.write(b"\r\n!BEGIN!\r\n")
-            rgb_arr1 = monitor(
-                            port1,
-                            baudrate,
-                            timeout,
-                            rows,
-                            cols,
-                            preamble,
-                            delta_preamble,
-                            suffix,
-                            short_input,
-                            rle,
-                            quiet,
-                            ser
-                        )
-        
-        print(rgb_arr1)
-        cv.namedWindow("Video Stream1", cv.WINDOW_KEEPRATIO)
-        cv.imshow("Video Stream1", rgb_arr1)
-        cv.waitKey(1)
-
-        input("Click a button to capture Image Two")
-        with Serial(port2, BAUDRATE, timeout=1) as ser:
-            ser.write(b"\r\n!BEGIN!\r\n")
-            ser.write(b"\r\n!BEGIN!\r\n")
-            rgb_arr2 = monitor(
-                        port2,
+    
+    rgb_arr1 = []
+    rgb_arr2 = []
+    input("Click a button to capture Image One")
+    with Serial(port1, BAUDRATE, timeout=1) as ser:
+        ser.write(b"\r\n!BEGIN!\r\n")
+        ser.write(b"\r\n!BEGIN!\r\n")
+        rgb_arr1 = monitor(
+                        port1,
                         baudrate,
                         timeout,
                         rows,
@@ -531,12 +512,36 @@ def main(port1: str, port2: str,
                         quiet,
                         ser
                     )
+    
+    print(rgb_arr1)
+    cv.namedWindow("Video Stream1", cv.WINDOW_KEEPRATIO)
+    cv.imshow("Video Stream1", rgb_arr1)
+    cv.waitKey(1)
 
-        cv.namedWindow("Video Stream2", cv.WINDOW_KEEPRATIO)
-        cv.imshow("Video Stream2", rgb_arr2)
-        cv.waitKey(1)
+    input("Click a button to capture Image Two")
+    with Serial(port2, BAUDRATE, timeout=1) as ser:
+        ser.write(b"\r\n!BEGIN!\r\n")
+        ser.write(b"\r\n!BEGIN!\r\n")
+        rgb_arr2 = monitor(
+                    port2,
+                    baudrate,
+                    timeout,
+                    rows,
+                    cols,
+                    preamble,
+                    delta_preamble,
+                    suffix,
+                    short_input,
+                    rle,
+                    quiet,
+                    ser
+                )
 
-        calculate_depth(rgb_arr1, rgb_arr2)
+    cv.namedWindow("Video Stream2", cv.WINDOW_KEEPRATIO)
+    cv.imshow("Video Stream2", rgb_arr2)
+    cv.waitKey(1)
+
+    calculate_depth(rgb_arr1, rgb_arr2)
 
 if __name__ == "__main__":
     main()

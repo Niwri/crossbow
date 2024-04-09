@@ -7,21 +7,22 @@ from serial import Serial
 import random 
 import math
 from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
 
 # RGB Green (LED) - edit after finding LED green value
-GREEN = 0b0000011111100000
+GREEN = 0b111111
 # everything in meters
 # focal length = 6mm
-FOCAL_LENGTH = 6 * (10^-3)
+FOCAL_LENGTH = 6 * (10**(-3))
 
 # pixel length, pixel width = 3.6um
-PIXEL_LENGTH = 3.6 * 10^(-6)
+PIXEL_LENGTH = 3.6 * (10**(-6))
 
 # baseline distance between center of left and right cameras - dummy variable for now
-BASELINE_D = 5
+BASELINE_D = 5 * (10**(-2))
 
-# window/box size (for matching image in pixels) - variable as well
-BOX_SIZE = 20
+# window/box size (for matching image in pixels) - variable as well (ACTUALLY BOX_SIZE/2)
+BOX_SIZE = 10
 
 # threshold for how close it should be to green
 THRESHOLD = 50
@@ -35,11 +36,13 @@ DELTA_PREAMBLE = "!DELTA!\r\n"
 SUFFIX = "!END!\r\n"
 
 ROWS = 144
+# actual size
+ROWS2 = 72
 COLS = 174
 
-global frame1
 frame1 = np.zeros((ROWS, COLS, 3))
-global frame2
+frame2 = np.zeros((ROWS, COLS, 3))
+
 
 def monitor(
     port: str,
@@ -267,50 +270,80 @@ def load_raw_frame(raw_data: bytes, rows: int, cols: int) -> np.array:
     return rgb_frame
 
 def calculate_depth(frame1, frame2):
-    # Array to save index values
-    indexArray = []
+    # Array to save index values (x, y)
+    indexArrayX = []
+    indexArrayY = []
+    # for indexArray
     indexcount = 0
-    # Arrays to hold colour values
-    minArray = np.zeros((ROWS,COLS))
-    minArray2 = np.zeros((ROWS,COLS))
-    # Get image data from image 1 --> given in BGR 565 format
-    # Algorithm to find the center of green pixels
-    for i in range(int(ROWS)):
+    # Arrays to hold colour count values
+    minArray = np.zeros((ROWS2,COLS))
+    minArray2 = np.zeros((ROWS2,COLS))
+    # Get image data from image 1 --> given in BGR 565 format (guess)
+    # Algorithm to find closest pixels (in RGB) to green pixels
+    for i in range(int(ROWS2)):
         for j in range(int(COLS)):
             colour_count = 0
             colour_count2 = 0
-            # How much blue
-            colour_count += (frame1[i][j][0] >> 3)
-            colour_count2 += (frame2[i][j][0] >> 3)
-            # How much red
-            colour_count += (frame1[i][j][2] >> 3)
-            colour_count2 += (frame2[i][j][2] >> 3)
-            # How much green
-            colour_count += abs((GREEN >> 5) - (frame1[i][j][1] >> 2))
-            colour_count2 += abs((GREEN >> 5) - (frame2[i][j][1] >> 2))
+            # Add red/blue values, add the difference between green values
+            colour_count = (frame1[i][j][0] >> 3) + (frame1[i][j][2] >> 3) + abs(GREEN - (frame1[i][j][1] >> 2))
+            colour_count2 = (frame2[i][j][0] >> 3) + (frame2[i][j][2] >> 3) + abs(GREEN - (frame2[i][j][1] >> 2))
+            #print(i, j)
+            #print("blue = ", frame1[i][j][0] >> 3)
+            #print("green = ", frame1[i][j][1] >> 2)
+            #print("red = ", frame1[i][j][2] >> 3)
             # Create a 2D array representing image with min --> closest to colour green
             minArray[i][j] = colour_count
             minArray2[i][j] = colour_count2
             # Compare with some threshold
             if colour_count <= THRESHOLD:
-                indexcount += 1
-                indexArray[indexcount] = (i,j)
-
+                indexcount = indexcount + 1
+                indexArrayX.append(j)
+                indexArrayY.append(i)
+            
+            #print(" ")
+            #print(minArray[i][j])
+            
+    # plot the min points
+    plt.scatter(indexArrayX, indexArrayY)
+    plt.xlim(0, COLS)
+    plt.ylim(0, ROWS2)
+    plt.show()
+    # create an array of (x,y) coordinates to pass into the kmeans cluster fit
+    indexArray = list(zip(indexArrayX, indexArrayY))
+    print(indexArray)
     # link to library
     # https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html
     # if we want to compare and check linearity or smth    
-    prev_inertia = ((ROWS/2)^2 + (COLS/2)^2)
+    prev_inertia = ((ROWS2/2)**2 + (COLS/2)**2)
 
+    # Algorithm to determine optimal number of clusters?
+    print("start")
+
+    inertias = []
+
+    '''
     for i in range(1, indexcount):
-        # Arbitrary number of clusters (from 1 to total number of points)
+        # Arbitrary number of clusters 
+        # (from 1 to total number of points)
         kmeans = KMeans(n_clusters=i)
         # fit the array of points
         kmeans.fit(indexArray)
         # compare the current inertia to a certain threshold (for now)
-        cur_inertia = kmeans.inertia_
-        if cur_inertia <= ((BOX_SIZE/2)^2 + (BOX_SIZE/2)^2):
-            break
-    
+        inertias.append(kmeans.inertia_)
+
+
+    plt.plot(range(1,indexcount), inertias, marker='o')
+    plt.title('Elbow method')
+    plt.xlabel('Number of clusters')
+    plt.ylabel('Inertia')
+    plt.show()
+
+    print("end")
+    '''
+    # always a random green pixel in corner, makes it best to have at least 2 clusters
+    kmeans = KMeans(n_clusters=2)
+    kmeans.fit(indexArray)
+
     # we have desired number of clusters n_clusters
     # access the labels assigned to each data point
     labels = kmeans.labels_
@@ -324,8 +357,8 @@ def calculate_depth(frame1, frame2):
     center_cluster = kmeans.cluster_centers_[cluster_maxpoints]
 
     # center_cluster returns coords so get x and y
-    pointx1 = center_cluster[0]
-    pointy1 = center_cluster[1]
+    pointx1 = int(center_cluster[0])
+    pointy1 = int(center_cluster[1])
 
     print("Center Coordinates:")
     print(pointx1)
@@ -341,110 +374,213 @@ def calculate_depth(frame1, frame2):
 
     frame1count = 0
     frame2count = 0
-    #comparison = huge number
+    comparison = ((2 * BOX_SIZE) ** 2) * (63 + 31 + 31)
+    
+    comparison_box = []
+    pointx2 = 0
 
-    # NEED TO REDO below
-     
     # left 
-    if pointx1 < (BOX_SIZE/2):
+    if pointx1 < (BOX_SIZE):
         # top left
-        if pointy1 < (BOX_SIZE/2):
-            # from 0 to end of row
-            for i in range(pointx1, COLS - pointx1 - (BOX_SIZE/2)):
-                # window of comparison
-                cur_comparison = 0
-                for j in range(i - pointx1, i + (BOX_SIZE/2)):
-                    for k in range(pointy1 + (BOX_SIZE/2)):
-                        frame1count += minArray[j][k]
-                        frame2count += minArray2[j + i][k + i]
-                        # maybe use original frame BGR values for the differences
-                        cur_comparison += (frame1count - frame2count)^2
-                if cur_comparison < comparison:
-                    comparison = cur_comparison
-                    pointx2 = j + pointx1 + i
+        if pointy1 < (BOX_SIZE):
+            for i in range(0, pointx1 + (BOX_SIZE)):
+                for j in range(0, pointy1 + (BOX_SIZE)):
+                    comparison_box.append(minArray[j][i])
         # bottom left
-        elif pointy1 > (ROWS - (BOX_SIZE/2)):
-            for i in range(pointx1, COLS - pointx1 - (BOX_SIZE/2)):
-                cur_comparison = 0
-                for j in range(i - pointx1, i + (BOX_SIZE/2)):
-                    for k in range(pointy1 - (BOX_SIZE/2), ROWS - pointy1):
-                        frame1count += minArray[j][k]
-                        frame2count += minArray2[j + i][k + i]
-                        cur_comparison += (frame1count - frame2count)^2
-                if cur_comparison < comparison:
-                    comparison = cur_comparison
-                    pointx2 = j + pointx1 + i
+        elif pointy1 > (ROWS2 - BOX_SIZE):
+            for i in range(0, pointx1 + (BOX_SIZE)):
+                for j in range(pointy1 - BOX_SIZE, ROWS2):
+                    comparison_box.append(minArray[j][i])
         # middle left
         else:
-            for i in range(pointx1, COLS - pointx1 - (BOX_SIZE/2)):
-                cur_comparison = 0
-                for j in range(i - pointx1, i + (BOX_SIZE/2)):
-                    for k in range(pointy1 - (BOX_SIZE/2), pointy1 + (BOX_SIZE/2)):
-                        frame1count += minArray[j][k]
-                        frame2count += minArray2[j + i][k + i]
-                        cur_comparison += (frame1count - frame2count)^2
-                if cur_comparison < comparison:
-                    comparison = cur_comparison
-                    pointx2 = j + pointx1 + i
+            for i in range(0, pointx1 + (BOX_SIZE)):
+                for j in range(pointy1 - BOX_SIZE, pointy1 + BOX_SIZE):
+                    comparison_box.append(minArray[j][i])
     # right
-    elif pointx1 > (COLS - (BOX_SIZE/2)):
+    elif pointx1 > (COLS - BOX_SIZE):
         # top right
-        if pointy1 < (BOX_SIZE/2):
-            for i in range((BOX_SIZE/2), COLS - pointx1):
-                cur_comparison = 0
-                for j in range(i - (BOX_SIZE/2), i + (COLS - pointx1)):
-                    for k in range(pointy1 + (BOX_SIZE/2)):
-                        frame1count += minArray[j][k]
-                        frame2count += minArray2[j + i][k + i]
-                        cur_comparison += (frame1count - frame2count)^2
-                if cur_comparison < comparison:
-                    comparison = cur_comparison
-                    pointx2 = j + pointx1 + i
+        if pointy1 < BOX_SIZE:
+            for i in range(pointx1 - BOX_SIZE, COLS):
+                for j in range(0, pointy1 + (BOX_SIZE)):
+                    comparison_box.append(minArray[j][i])
         # bottom right
-        elif pointy1 > (ROWS - (BOX_SIZE/2)):
-            for i in range((BOX_SIZE/2), COLS - pointx1):
-                cur_comparison = 0
-                for j in range(i - (BOX_SIZE/2), i + (COLS - pointx1)):
-                    for k in range(pointy1 - (BOX_SIZE/2), ROWS - pointy1):
-                        frame1count += minArray[j][k]
-                        frame2count += minArray2[j + i][k + i]
-                        cur_comparison += (frame1count - frame2count)^2
-                if cur_comparison < comparison:
-                    comparison = cur_comparison
-                    pointx2 = j + pointx1 + i
+        elif pointy1 > (ROWS2 - BOX_SIZE):
+            for i in range(pointx1 - BOX_SIZE, COLS):
+                for j in range(pointy1 - BOX_SIZE, ROWS2):
+                    comparison_box.append(minArray[j][i])
         # middle right
         else:
-            for i in range((BOX_SIZE/2), COLS - pointx1):
+            for i in range(pointx1 - BOX_SIZE, COLS):
+                for j in range(pointy1 - BOX_SIZE, pointy1 + BOX_SIZE):
+                    comparison_box.append(minArray[j][i])
+    # no edge conditions for x
+    else:   
+        if pointy1 < (BOX_SIZE):
+            for i in range(pointx1 - BOX_SIZE, pointx1 + BOX_SIZE):
+                for j in range(0, pointy1 + (BOX_SIZE)):
+                    comparison_box.append(minArray[j][i])
+        # bottom left
+        elif pointy1 > (ROWS2 - BOX_SIZE):
+            for i in range(pointx1 - BOX_SIZE, pointx1 + BOX_SIZE):
+                for j in range(pointy1 - BOX_SIZE, ROWS2):
+                    comparison_box.append(minArray[j][i])
+        # middle left
+        else:
+            for i in range(pointx1 - BOX_SIZE, pointx1 + BOX_SIZE):
+                for j in range(pointy1 - BOX_SIZE, pointy1 + BOX_SIZE):
+                    comparison_box.append(minArray[j][i])
+    
+    # left 
+    if pointx1 < (BOX_SIZE):
+        # top left
+        if pointy1 < (BOX_SIZE):
+            # need to compare from 0 to end
+            for i in range(pointx1, COLS - (BOX_SIZE)):
+                # window of comparison
                 cur_comparison = 0
-                for j in range(i - (BOX_SIZE/2), i + (COLS - pointx1)):
-                    for k in range(pointy1 - (BOX_SIZE/2), pointy1 + (BOX_SIZE/2)):
-                        frame1count += minArray[j][k]
-                        frame2count += minArray2[j + i][k + i]
-                        cur_comparison += (frame1count - frame2count)^2
+                # keep track of position in comparison box
+                frame1compare = 0
+                # takes care of x values
+                for j in range(i - pointx1, i + (BOX_SIZE)):
+                    # takes care of y values
+                    for k in range(0, pointy1 + (BOX_SIZE)):
+                        # colour value at specific point in box (left to right up to down)
+                        frame1count = comparison_box[frame1compare]
+                        # increment the count to get the right index
+                        frame1compare = frame1compare + 1
+                        # colour value at specific point in window of comparison
+                        frame2count = minArray2[k][j]
+                        # maybe use original frame BGR values for the differences
+                        cur_comparison += (frame1count - frame2count)**2
                 if cur_comparison < comparison:
                     comparison = cur_comparison
-                    pointx2 = j + pointx1 + i
-    # no edge conditions
+                    pointx2 = i
+        # bottom left
+        elif pointy1 > (ROWS2 - BOX_SIZE):
+            for i in range(pointx1, COLS - (BOX_SIZE)):
+                cur_comparison = 0
+                frame1compare = 0
+                for j in range(i - pointx1, i + BOX_SIZE):
+                    for k in range(pointy1 - BOX_SIZE, ROWS2):
+                        frame1count = comparison_box[frame1compare]
+                        frame1compare = frame1compare + 1
+                        frame2count = minArray2[k][j]
+                        cur_comparison += (frame1count - frame2count)**2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = i
+        # middle left
+        else:
+            for i in range(pointx1, COLS - (BOX_SIZE)):
+                cur_comparison = 0
+                frame1compare = 0
+                for j in range(i - pointx1, i + BOX_SIZE):
+                    for k in range(pointy1 - BOX_SIZE, pointy1 + BOX_SIZE):
+                        frame1count = comparison_box[frame1compare]
+                        frame1compare = frame1compare + 1
+                        frame2count = minArray2[k][j]
+                        cur_comparison += (frame1count - frame2count)**2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = i
+    # right
+    elif pointx1 > (COLS - BOX_SIZE):
+        # top right
+        if pointy1 < BOX_SIZE:
+            for i in range(BOX_SIZE, COLS - pointx1):
+                cur_comparison = 0
+                frame1compare = 0
+                for j in range(i - BOX_SIZE, i + (COLS - pointx1)):
+                    for k in range(0, pointy1 + (BOX_SIZE)):
+                        frame1count = comparison_box[frame1compare]
+                        frame1compare = frame1compare + 1
+                        frame2count = minArray2[k][j]
+                        cur_comparison += (frame1count - frame2count)**2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = i
+        # bottom right
+        elif pointy1 > (ROWS2 - BOX_SIZE):
+            for i in range(BOX_SIZE, COLS - pointx1):
+                cur_comparison = 0
+                frame1compare = 0
+                for j in range(i - BOX_SIZE, i + (COLS - pointx1)):
+                    for k in range(pointy1 - BOX_SIZE, ROWS2):
+                        frame1count = comparison_box[frame1compare]
+                        frame1compare = frame1compare + 1
+                        frame2count = minArray2[k][j]
+                        cur_comparison += (frame1count - frame2count)**2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = i
+        # middle right
+        else:
+            for i in range(BOX_SIZE, COLS - pointx1):
+                cur_comparison = 0
+                frame1compare = 0
+                for j in range(i - BOX_SIZE, i + (COLS - pointx1)):
+                    for k in range(pointy1 - BOX_SIZE, pointy1 + BOX_SIZE):
+                        frame1count = comparison_box[frame1compare]
+                        frame1compare = frame1compare + 1
+                        frame2count = minArray2[k][j]
+                        cur_comparison += (frame1count - frame2count)**2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = i
+    # no edge conditions for x
     else:   
-        for i in range((BOX_SIZE/2), COLS - (BOX_SIZE/2)):
-            cur_comparison = 0
-            for j in range(i - (BOX_SIZE/2), i + (BOX_SIZE/2)):
-                for k in range(pointy1 - (BOX_SIZE/2), pointy1 + (BOX_SIZE/2)):
-                    frame1count += minArray[j][k]
-                    frame2count += minArray2[j + i][k + i]
-                    cur_comparison += (frame1count - frame2count)^2
-            if cur_comparison < comparison:
-                comparison = cur_comparison
-                pointx2 = j + pointx1 + i
+        # top middle
+        if pointy1 < (BOX_SIZE):
+            for i in range(BOX_SIZE, COLS - BOX_SIZE):
+                cur_comparison = 0
+                frame1compare = 0
+                for j in range(i - BOX_SIZE, i + BOX_SIZE):
+                    for k in range(0, pointy1 + (BOX_SIZE)):
+                        frame1count = comparison_box[frame1compare]
+                        frame1compare = frame1compare + 1
+                        frame2count = minArray2[k][j]
+                        cur_comparison += (frame1count - frame2count)**2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = i
+        # bottom middle
+        elif pointy1 > (ROWS2 - BOX_SIZE):
+            for i in range(BOX_SIZE, COLS - BOX_SIZE):
+                cur_comparison = 0
+                frame1compare = 0
+                for j in range(i - BOX_SIZE, i + BOX_SIZE):
+                    for k in range(pointy1 - BOX_SIZE, ROWS2):
+                        frame1count = comparison_box[frame1compare]
+                        frame1compare = frame1compare + 1
+                        frame2count = minArray2[k][j]
+                        cur_comparison += (frame1count - frame2count)**2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = i
+        # middle middle
+        else:
+            for i in range(BOX_SIZE, COLS - BOX_SIZE):
+                cur_comparison = 0
+                frame1compare = 0
+                for j in range(i - BOX_SIZE, i + BOX_SIZE):
+                    for k in range(pointy1 - BOX_SIZE, pointy1 + (BOX_SIZE)):
+                        frame1count = comparison_box[frame1compare]
+                        frame1compare = frame1compare + 1
+                        frame2count = minArray2[k][j]
+                        cur_comparison += (frame1count - frame2count)**2
+                if cur_comparison < comparison:
+                    comparison = cur_comparison
+                    pointx2 = i
     
     distance2 = pointx2
-
+    print("Coordinates Frame 2:")
+    print(pointx2, pointy2)
     # Calculate the disparity
     disparity = abs(distance1 - distance2)
 
     depth = (FOCAL_LENGTH/PIXEL_LENGTH) * (BASELINE_D/(disparity * PIXEL_LENGTH))
 
-    return depth 
+    return depth
 
 @click.command()
 @click.option(
@@ -489,12 +625,40 @@ def main(port1: str, port2: str,
     while True:
         rgb_arr1 = []
         rgb_arr2 = []
-        input("Click a button to capture Image One")
-        with Serial(port1, BAUDRATE, timeout=1) as ser:
-            ser.write(b"\r\n!BEGIN!\r\n")
-            ser.write(b"\r\n!BEGIN!\r\n")
-            rgb_arr1 = monitor(
-                            port1,
+        done = False
+        while done == False:
+            input("Click a button to capture Image One")
+            
+            with Serial(port1, BAUDRATE, timeout=1) as ser:
+                ser.write(b"\r\n!BEGIN!\r\n")
+                ser.write(b"\r\n!BEGIN!\r\n")
+                rgb_arr1 = monitor(
+                                port1,
+                                baudrate,
+                                timeout,
+                                rows,
+                                cols,
+                                preamble,
+                                delta_preamble,
+                                suffix,
+                                short_input,
+                                rle,
+                                quiet,
+                                ser
+                            )
+                ser.close()
+            
+            print(rgb_arr1)
+            cv.namedWindow("Video Stream1", cv.WINDOW_KEEPRATIO)
+            cv.imshow("Video Stream1", rgb_arr1)
+            cv.waitKey(1)
+
+            input("Click a button to capture Image Two")
+            with Serial(port2, BAUDRATE, timeout=1) as ser:
+                ser.write(b"\r\n!BEGIN!\r\n")
+                ser.write(b"\r\n!BEGIN!\r\n")
+                rgb_arr2 = monitor(
+                            port2,
                             baudrate,
                             timeout,
                             rows,
@@ -507,36 +671,21 @@ def main(port1: str, port2: str,
                             quiet,
                             ser
                         )
-        
-        print(rgb_arr1)
-        cv.namedWindow("Video Stream1", cv.WINDOW_KEEPRATIO)
-        cv.imshow("Video Stream1", rgb_arr1)
-        cv.waitKey(1)
+                ser.close()
 
-        input("Click a button to capture Image Two")
-        with Serial(port2, BAUDRATE, timeout=1) as ser:
-            ser.write(b"\r\n!BEGIN!\r\n")
-            ser.write(b"\r\n!BEGIN!\r\n")
-            rgb_arr2 = monitor(
-                        port2,
-                        baudrate,
-                        timeout,
-                        rows,
-                        cols,
-                        preamble,
-                        delta_preamble,
-                        suffix,
-                        short_input,
-                        rle,
-                        quiet,
-                        ser
-                    )
+            cv.namedWindow("Video Stream2", cv.WINDOW_KEEPRATIO)
+            cv.imshow("Video Stream2", rgb_arr2)
+            cv.waitKey(1)
 
-        cv.namedWindow("Video Stream2", cv.WINDOW_KEEPRATIO)
-        cv.imshow("Video Stream2", rgb_arr2)
-        cv.waitKey(1)
-
-        calculate_depth(rgb_arr1, rgb_arr2)
+            answer = input("Good? [y/n]")
+            if answer == "y":
+                done = True
+                break
+            
+        z = calculate_depth(rgb_arr1, rgb_arr2)
+        print("Depth: ")
+        print(z)
+        done = False
 
 if __name__ == "__main__":
     main()

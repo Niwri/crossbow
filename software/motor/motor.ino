@@ -16,7 +16,8 @@ Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 
 // Connect a stepper motor with 200 steps per revolution (1.8 degree)
 // to motor port #1 (M1 and M2)
-Adafruit_StepperMotor *myMotor = AFMS.getStepper(200, 1);
+Adafruit_StepperMotor *leftMotor = AFMS.getStepper(200, 1);
+Adafruit_StepperMotor *rightMotor = AFMS.getStepper(200, 2);
 
 int steps = 0;
 void setup() {
@@ -31,7 +32,8 @@ void setup() {
   }
   Serial.println("Motor Shield found.");
 
-  myMotor->setSpeed(10);  // 10 rpm
+  leftMotor->setSpeed(10);  // 10 rpm
+  rightMotor->setSpeed(10);
 
 }
 void loop() {
@@ -41,13 +43,21 @@ void loop() {
       
       data_rcvd = Serial.readStringUntil('\n');
       steps = data_rcvd.toInt();
-      myMotor->step(abs(steps), steps > 0 ? FORWARD : BACKWARD, INTERLEAVE);
+      for(int i = 0; i < abs(steps); i++) {
+          
+        leftMotor->onestep(steps > 0 ? FORWARD : BACKWARD, INTERLEAVE);
+        rightMotor->onestep(steps > 0 ? FORWARD : BACKWARD, INTERLEAVE);
+      }
       
     } else if(data_rcvd == "up") {
       data_rcvd = Serial.readStringUntil('\n');
       steps = data_rcvd.toInt();
 
-      myMotor->step(abs(steps), steps > 0 ? FORWARD : BACKWARD, INTERLEAVE);
+      for(int i = 0; i < abs(steps); i++) {
+
+        leftMotor->onestep(steps > 0 ? FORWARD : BACKWARD, INTERLEAVE);
+        rightMotor->onestep(steps > 0 ? BACKWARD : FORWARD, INTERLEAVE);
+      }
     } 
   }
 

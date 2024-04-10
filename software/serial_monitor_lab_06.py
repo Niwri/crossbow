@@ -9,11 +9,24 @@ import math
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 
+PORT1 = "COM4"
+PORT2 = "COM5"
+BAUDRATE = 115200
+
+PREAMBLE = "!START!\r\n"
+DELTA_PREAMBLE = "!DELTA!\r\n"
+SUFFIX = "!END!\r\n"
+
+ROWS = 144
+# actual size
+ROWS2 = 72
+COLS = 174
+
 # RGB Green (LED) - edit after finding LED green value
 GREEN = 0b111111
 # everything in meters
-# focal length = 6mm
-FOCAL_LENGTH = 6 * (10**(-3))
+# focal length = 3.6mm --> do not know what actual focal length is (not provided)
+FOCAL_LENGTH = 3.6 * (10**(-3))
 
 # pixel length, pixel width = 3.6um
 PIXEL_LENGTH = 3.6 * (10**(-6))
@@ -27,18 +40,11 @@ BOX_SIZE = 10
 # threshold for how close it should be to green
 THRESHOLD = 50
 
-PORT1 = "COM4"
-PORT2 = "COM5"
-BAUDRATE = 115200
+# center of Y (not actual center since camera mounted on top?) variable
+CENTER_Y = ROWS2/2
 
-PREAMBLE = "!START!\r\n"
-DELTA_PREAMBLE = "!DELTA!\r\n"
-SUFFIX = "!END!\r\n"
-
-ROWS = 144
-# actual size
-ROWS2 = 72
-COLS = 174
+# threshold of # pixels close to target area
+PIXEL_THRESHOLD = 5
 
 frame1 = np.zeros((ROWS, COLS, 3))
 frame2 = np.zeros((ROWS, COLS, 3))
@@ -269,7 +275,7 @@ def load_raw_frame(raw_data: bytes, rows: int, cols: int) -> np.array:
     
     return rgb_frame
 
-def calculate_depth(frame1, frame2):
+def calculate_coords(frame1, frame2):
     # Array to save index values (x, y)
     indexArrayX = []
     indexArrayY = []
@@ -363,8 +369,6 @@ def calculate_depth(frame1, frame2):
     print("Center Coordinates:")
     print(pointx1)
     print(pointy1)
-
-    distance1 = pointx1 
 
     # Get image data from image 2
     # Algorithm to find the matching image - sum of squared differences
@@ -572,15 +576,39 @@ def calculate_depth(frame1, frame2):
                     comparison = cur_comparison
                     pointx2 = i
     
-    distance2 = pointx2
     print("Coordinates Frame 2:")
     print(pointx2, pointy2)
-    # Calculate the disparity
-    disparity = abs(distance1 - distance2)
+    # Calculate the horizontal disparity
+    disparity_h = abs(pointx1 - pointx2)
+    # distance of pointx1 from the right side of frame 1
+    distance_left = COLS - pointx1
+    # distance of pointx2 from the left side of frame 2
+    distance_right = pointx2
+    delta_distance = distance_right - distance_left
+    
+    # Calculate vertical distance from target area
+    distance_v = pointy1 - CENTER_Y
 
-    depth = (FOCAL_LENGTH/PIXEL_LENGTH) * (BASELINE_D/(disparity * PIXEL_LENGTH))
+    # calculation doesnt seem right for depth
+    depth = (FOCAL_LENGTH/PIXEL_LENGTH) * (BASELINE_D/(disparity_h * PIXEL_LENGTH))
+    print("Depth: ")
+    print(depth)
 
-    return depth
+    # Horizontal
+    if delta_distance < -(PIXEL_THRESHOLD):
+        print("move left")
+    elif delta_distance > PIXEL_THRESHOLD:
+        print("move right")
+    else:
+        print("horizontal orientation is good")
+    # Vertical
+    if distance_v < -(PIXEL_THRESHOLD):
+        print("move down")
+    elif distance_v > PIXEL_THRESHOLD:
+        print("move up")
+    else:
+        print("vertical orientation is good")
+    return 
 
 @click.command()
 @click.option(
@@ -682,9 +710,7 @@ def main(port1: str, port2: str,
                 done = True
                 break
             
-        z = calculate_depth(rgb_arr1, rgb_arr2)
-        print("Depth: ")
-        print(z)
+        calculate_coords(rgb_arr1, rgb_arr2)
         done = False
 
 if __name__ == "__main__":

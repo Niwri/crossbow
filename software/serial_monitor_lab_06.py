@@ -674,105 +674,67 @@ def main(port1: str, port2: str, port3: str,
     ):
     
     ser3 = Serial(port3, BAUDRATE, timeout=1)
-    while True:
-        input("Click a button to rotate Left")
-        motor.rotateLeft(ser3, -180)
-        input("Click a button to rotate Left")
-        motor.rotateLeft(ser3, 180)
-        input("Click a button to rotate up")
-        motor.rotateUp(ser3, -360)
-        input("Click a button to rotate up")
-        motor.rotateUp(ser3, 360)
-
     rgb_arr1 = []
     rgb_arr2 = []
         done = False
         while done == False:
-        input("Click a button to capture Image One")
+            input("Click a button to capture Image One")
+                
+            with Serial(port1, BAUDRATE, timeout=1) as ser:
+                ser.write(b"\r\n!BEGIN!\r\n")
+                ser.write(b"\r\n!BEGIN!\r\n")
+                rgb_arr1 = monitor(
+                                port1,
+                                baudrate,
+                                timeout,
+                                rows,
+                                cols,
+                                preamble,
+                                delta_preamble,
+                                suffix,
+                                short_input,
+                                rle,
+                                quiet,
+                                ser
+                            )
+                    ser.close()
             
-        with Serial(port1, BAUDRATE, timeout=1) as ser:
-            ser.write(b"\r\n!BEGIN!\r\n")
-            ser.write(b"\r\n!BEGIN!\r\n")
-            rgb_arr1 = monitor(
-                            port1,
-                            baudrate,
-                            timeout,
-                            rows,
-                            cols,
-                            preamble,
-                            delta_preamble,
-                            suffix,
-                            short_input,
-                            rle,
-                            quiet,
-                            ser
-                        )
-                ser.close()
-        
-        print(rgb_arr1)
-        cv.namedWindow("Video Stream1", cv.WINDOW_KEEPRATIO)
-        cv.imshow("Video Stream1", rgb_arr1)
-        cv.waitKey(1)
-
-            input("Click a button to capture Image Two")
-            with Serial(port2, BAUDRATE, timeout=1) as ser:
-                ser.write(b"\r\n!BEGIN!\r\n")
-                ser.write(b"\r\n!BEGIN!\r\n")
-                rgb_arr2 = monitor(
-                            port2,
-                            baudrate,
-                            timeout,
-                            rows,
-                            cols,
-                            preamble,
-                            delta_preamble,
-                            suffix,
-                            short_input,
-                            rle,
-                            quiet,
-                            ser
-                        )
-                ser.close()
-
-            cv.namedWindow("Video Stream2", cv.WINDOW_KEEPRATIO)
-            cv.imshow("Video Stream2", rgb_arr2)
+            print(rgb_arr1)
+            cv.namedWindow("Video Stream1", cv.WINDOW_KEEPRATIO)
+            cv.imshow("Video Stream1", rgb_arr1)
             cv.waitKey(1)
 
-            answer = input("Good? [y/n]")
-            if answer == "y":
-                done = True
-                break
+                input("Click a button to capture Image Two")
+                with Serial(port2, BAUDRATE, timeout=1) as ser:
+                    ser.write(b"\r\n!BEGIN!\r\n")
+                    ser.write(b"\r\n!BEGIN!\r\n")
+                    rgb_arr2 = monitor(
+                                port2,
+                                baudrate,
+                                timeout,
+                                rows,
+                                cols,
+                                preamble,
+                                delta_preamble,
+                                suffix,
+                                short_input,
+                                rle,
+                                quiet,
+                                ser
+                            )
+                    ser.close()
+
+                cv.namedWindow("Video Stream2", cv.WINDOW_KEEPRATIO)
+                cv.imshow("Video Stream2", rgb_arr2)
+                cv.waitKey(1)
+
+                answer = input("Good? [y/n]")
+                if answer == "y":
+                    done = True
+                    break
             
         calculate_coords(rgb_arr1, rgb_arr2)
         done = False
 
 if __name__ == "__main__":
     main()
-    #monitor()
-    rows = 400
-    cols = 400
-    sum = np.zeros((rows,cols,3), np.uint8) 
-
-    while(1):
-        
-        for i in range(rows):
-            for j in range(cols):
-                sum[i][j] = [random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)]
-        cv.imshow("Video Stream", sum)
-        if cv.waitKey(1) == ord("q"):
-                break
-    """
-    """
-    while True:
-        a = b""
-        with Serial("COM4", BAUDRATE, timeout=1) as ser:
-            ser.write(b'\r\n!BEGIN!\r\n')
-            print("Sent\n")
-            while True:
-                a += ser.read(max(1, ser.in_waiting))
-                suffix_idx = a.find("WACK\n".encode("ascii"))
-                if suffix_idx != -1:
-                    break
-            print(a)
-            print("END")
-    """
